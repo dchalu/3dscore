@@ -1,18 +1,13 @@
-//
-//  Score3DApp.swift
-//  Score3D
-//
-//  Created by DeltaCharlie on 26/08/2026.
-//
-
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 @main
 struct Score3DApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Archer.self,
+            ShootingRound.self,
+            ScoreEntry.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

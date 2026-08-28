@@ -6,8 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		B19878C730401E11003E7055 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B14BB55A303F5B680084E915 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B14BB561303F5B680084E915;
+			remoteInfo = Score3D;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		B14BB562303F5B680084E915 /* Score3D.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Score3D.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B19878BE304019FE003E7055 /* ScoreRulesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreRulesTests.swift; sourceTree = "<group>"; };
+		B19878C330401E11003E7055 /* Score3DTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Score3DTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -16,10 +28,22 @@
 			path = Score3D;
 			sourceTree = "<group>";
 		};
+		B19878C430401E11003E7055 /* Score3DTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Score3DTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		B14BB55F303F5B680084E915 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B19878C030401E11003E7055 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,7 +57,9 @@
 			isa = PBXGroup;
 			children = (
 				B14BB564303F5B680084E915 /* Score3D */,
+				B19878C430401E11003E7055 /* Score3DTests */,
 				B14BB563303F5B680084E915 /* Products */,
+				B19878BD304019EC003E7055 /* Score3DTests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -41,8 +67,17 @@
 			isa = PBXGroup;
 			children = (
 				B14BB562303F5B680084E915 /* Score3D.app */,
+				B19878C330401E11003E7055 /* Score3DTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B19878BD304019EC003E7055 /* Score3DTests */ = {
+			isa = PBXGroup;
+			children = (
+				B19878BE304019FE003E7055 /* ScoreRulesTests.swift */,
+			);
+			path = Score3DTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -70,6 +105,29 @@
 			productReference = B14BB562303F5B680084E915 /* Score3D.app */;
 			productType = "com.apple.product-type.application";
 		};
+		B19878C230401E11003E7055 /* Score3DTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B19878C930401E11003E7055 /* Build configuration list for PBXNativeTarget "Score3DTests" */;
+			buildPhases = (
+				B19878BF30401E11003E7055 /* Sources */,
+				B19878C030401E11003E7055 /* Frameworks */,
+				B19878C130401E11003E7055 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B19878C830401E11003E7055 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B19878C430401E11003E7055 /* Score3DTests */,
+			);
+			name = Score3DTests;
+			packageProductDependencies = (
+			);
+			productName = Score3DTests;
+			productReference = B19878C330401E11003E7055 /* Score3DTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -82,6 +140,10 @@
 				TargetAttributes = {
 					B14BB561303F5B680084E915 = {
 						CreatedOnToolsVersion = 26.6;
+					};
+					B19878C230401E11003E7055 = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = B14BB561303F5B680084E915;
 					};
 				};
 			};
@@ -100,12 +162,20 @@
 			projectRoot = "";
 			targets = (
 				B14BB561303F5B680084E915 /* Score3D */,
+				B19878C230401E11003E7055 /* Score3DTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		B14BB560303F5B680084E915 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B19878C130401E11003E7055 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +192,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B19878BF30401E11003E7055 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B19878C830401E11003E7055 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B14BB561303F5B680084E915 /* Score3D */;
+			targetProxy = B19878C730401E11003E7055 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		B14BB56D303F5B690084E915 /* Debug */ = {
@@ -251,6 +336,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RW7UA29MT4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -266,12 +352,16 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.damien.Score3D;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -282,6 +372,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RW7UA29MT4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -297,12 +388,58 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.damien.Score3D;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		B19878CA30401E11003E7055 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RW7UA29MT4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.damien.Score3DTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Score3D.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Score3D";
+			};
+			name = Debug;
+		};
+		B19878CB30401E11003E7055 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = RW7UA29MT4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.damien.Score3DTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Score3D.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Score3D";
 			};
 			name = Release;
 		};
@@ -323,6 +460,15 @@
 			buildConfigurations = (
 				B14BB570303F5B690084E915 /* Debug */,
 				B14BB571303F5B690084E915 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B19878C930401E11003E7055 /* Build configuration list for PBXNativeTarget "Score3DTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B19878CA30401E11003E7055 /* Debug */,
+				B19878CB30401E11003E7055 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
