@@ -350,7 +350,12 @@ struct RoundSummaryView: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     ForEach(round.archerNames, id: \.self) { archerName in
-                        ArcherSummaryRow(breakdown: round.scoreBreakdown(for: archerName))
+                        NavigationLink {
+                            ArcherScoreSheetView(sheet: round.scoreSheet(for: archerName))
+                        } label: {
+                            ArcherSummaryRow(breakdown: round.scoreBreakdown(for: archerName))
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
 
@@ -390,6 +395,10 @@ private struct ArcherSummaryRow: View {
                 Text("\(breakdown.total) pts")
                     .font(.system(size: 30, weight: .bold, design: .default).monospacedDigit())
                     .foregroundStyle(Score3DTheme.textPrimary)
+
+                Image(systemName: "chevron.right")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(Score3DTheme.textSecondary)
             }
 
             HStack(spacing: 6) {
@@ -423,6 +432,412 @@ private struct ArcherSummaryRow: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(Score3DTheme.border, lineWidth: 1)
         }
+    }
+}
+
+private struct ArcherScoreSheetView: View {
+    let sheet: ArcherScoreSheet
+    @State private var pdfURL: URL?
+    @State private var pdfExportAlert: PersistenceAlert?
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                scoreSheetHeader
+                scoreSheetTable
+                scoreSheetTotals
+            }
+            .padding()
+        }
+        .background(Score3DTheme.background)
+        .tint(Score3DTheme.interaction)
+        .navigationTitle("Feuille de score")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            preparePDF()
+        }
+        .alert(item: $pdfExportAlert) { alert in
+            Alert(
+                title: Text("Export impossible"),
+                message: Text(alert.message),
+                dismissButton: .default(Text("OK"))
+            )
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                if let pdfURL {
+                    ShareLink(
+                        item: pdfURL,
+                        subject: Text(sheet.shareTitle)
+                    ) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .accessibilityLabel("Partager la feuille de score de \(sheet.archerName)")
+                } else {
+                    Button(action: preparePDF) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .accessibilityLabel("Préparer la feuille de score de \(sheet.archerName)")
+                }
+            }
+        }
+    }
+
+    private func preparePDF() {
+        do {
+            pdfURL = try ArcherScoreSheetPDFExporter.export(sheet)
+        } catch {
+            pdfExportAlert = PersistenceAlert(message: "Le PDF de la feuille de score n’a pas pu être préparé.")
+        }
+    }
+
+    private var scoreSheetHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(sheet.archerName.uppercased())
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(Score3DTheme.textPrimary)
+                .lineLimit(2)
+
+            Text(sheet.roundName)
+                .font(.headline)
+                .foregroundStyle(Score3DTheme.textSecondary)
+                .lineLimit(2)
+
+            Text(sheet.roundDate, format: .dateTime.day().month(.wide).year())
+                .font(.body)
+                .foregroundStyle(Score3DTheme.textSecondary)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Score3DTheme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Score3DTheme.border, lineWidth: 1)
+        }
+    }
+
+    private var scoreSheetTable: some View {
+        VStack(spacing: 0) {
+            scoreSheetHeaderRow
+
+            ForEach(Array(sheet.rows.enumerated()), id: \.offset) { _, row in
+                ArcherScoreSheetRowView(row: row)
+            }
+        }
+        .background(Score3DTheme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Score3DTheme.border, lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var scoreSheetHeaderRow: some View {
+        HStack(spacing: 8) {
+            scoreSheetColumnTitle("Cible", alignment: .leading)
+            scoreSheetColumnTitle("F1", width: 34)
+            scoreSheetColumnTitle("F2", width: 34)
+            scoreSheetColumnTitle("Total", width: 52)
+            scoreSheetColumnTitle("Cumul", width: 58)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Score3DTheme.paleForest)
+    }
+
+    private var scoreSheetTotals: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Total général")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(Score3DTheme.textSecondary)
+
+                Spacer()
+
+                Text("\(sheet.breakdown.total) pts")
+                    .font(.system(size: 32, weight: .bold).monospacedDigit())
+                    .foregroundStyle(Score3DTheme.textPrimary)
+            }
+
+            HStack(spacing: 6) {
+                summaryStat("11", sheet.breakdown.elevens)
+                summaryStat("10", sheet.breakdown.tens)
+                summaryStat("8", sheet.breakdown.eights)
+                summaryStat("5", sheet.breakdown.fives)
+                summaryStat("M", sheet.breakdown.misses)
+            }
+        }
+        .padding(14)
+        .background(Score3DTheme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Score3DTheme.border, lineWidth: 1)
+        }
+    }
+
+    private func scoreSheetColumnTitle(
+        _ title: String,
+        width: CGFloat? = nil,
+        alignment: Alignment = .trailing
+    ) -> some View {
+        Text(title)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Score3DTheme.textSecondary)
+            .frame(maxWidth: width == nil ? .infinity : nil, alignment: alignment)
+            .frame(width: width, alignment: alignment)
+    }
+
+    private func summaryStat(_ label: String, _ value: Int) -> some View {
+        VStack(spacing: 5) {
+            Text(label)
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(Score3DTheme.textPrimary)
+            Text("\(value)")
+                .font(.callout.monospacedDigit().weight(.semibold))
+                .foregroundStyle(Score3DTheme.textSecondary)
+        }
+        .frame(maxWidth: .infinity, minHeight: 50)
+        .background(Score3DTheme.paleForest.opacity(0.55), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Score3DTheme.border, lineWidth: 1)
+        }
+    }
+}
+
+private enum ArcherScoreSheetPDFExporter {
+    static func export(_ sheet: ArcherScoreSheet) throws -> URL {
+        let fileName = "\(sanitizedFileName(sheet.shareTitle)).pdf"
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+        let data = renderPDF(for: sheet)
+        try data.write(to: fileURL, options: .atomic)
+        return fileURL
+    }
+
+    private static func renderPDF(for sheet: ArcherScoreSheet) -> Data {
+        let pageBounds = CGRect(x: 0, y: 0, width: 420, height: 595)
+        let format = UIGraphicsPDFRendererFormat()
+        format.documentInfo = [
+            kCGPDFContextTitle as String: sheet.shareTitle,
+            kCGPDFContextCreator as String: "Score3D",
+        ]
+
+        let renderer = UIGraphicsPDFRenderer(bounds: pageBounds, format: format)
+        return renderer.pdfData { context in
+            context.beginPage()
+            drawSheet(sheet, in: pageBounds)
+        }
+    }
+
+    private static func drawSheet(_ sheet: ArcherScoreSheet, in pageBounds: CGRect) {
+        let margin: CGFloat = 24
+        let contentWidth = pageBounds.width - margin * 2
+        var y = margin
+
+        drawHeader(sheet, x: margin, y: y, width: contentWidth)
+        y += 112
+
+        let columns = [
+            PDFColumn(title: "N°", width: 34, alignment: .center),
+            PDFColumn(title: "Flèche 1", width: 64, alignment: .center),
+            PDFColumn(title: "Flèche 2", width: 64, alignment: .center),
+            PDFColumn(title: "Total", width: 70, alignment: .center),
+            PDFColumn(title: "Cumul", width: 68, alignment: .center),
+            PDFColumn(title: "11", width: 36, alignment: .center),
+            PDFColumn(title: "10", width: 36, alignment: .center),
+        ]
+
+        drawTable(sheet, columns: columns, x: margin, y: y, width: contentWidth)
+    }
+
+    private static func drawHeader(_ sheet: ArcherScoreSheet, x: CGFloat, y: CGFloat, width: CGFloat) {
+        let logoRect = CGRect(x: x + (width - 174) / 2, y: y, width: 174, height: 50)
+        if let logo = UIImage(named: "Score3DHomeLogo") {
+            logo.draw(in: aspectFittedRect(for: logo.size, in: logoRect))
+        } else {
+            drawText("Score3D", in: logoRect, font: .boldSystemFont(ofSize: 28), color: .black, alignment: .center)
+        }
+
+        drawText(sheet.roundName, in: CGRect(x: x, y: y + 58, width: width, height: 18), font: .boldSystemFont(ofSize: 12), color: .black, alignment: .center)
+        drawText(sheet.archerName.uppercased(), in: CGRect(x: x, y: y + 78, width: width, height: 18), font: .boldSystemFont(ofSize: 13), color: .black, alignment: .center)
+        drawText(formattedDate(sheet.roundDate), in: CGRect(x: x, y: y + 98, width: width, height: 12), font: .systemFont(ofSize: 8), color: .darkGray, alignment: .center)
+    }
+
+    private static func drawTable(_ sheet: ArcherScoreSheet, columns: [PDFColumn], x: CGFloat, y: CGFloat, width: CGFloat) {
+        let headerHeight: CGFloat = 24
+        let rowHeight: CGFloat = 16.8
+        var currentX = x
+
+        UIColor(white: 0.92, alpha: 1).setFill()
+        UIRectFill(CGRect(x: x, y: y, width: width, height: headerHeight))
+
+        for column in columns {
+            let rect = CGRect(x: currentX, y: y, width: column.width, height: headerHeight)
+            stroke(rect)
+            drawText(column.title, in: rect.insetBy(dx: 2, dy: 7), font: .boldSystemFont(ofSize: 7), color: .black, alignment: column.alignment)
+            currentX += column.width
+        }
+
+        for (index, row) in sheet.rows.enumerated() {
+            let rowY = y + headerHeight + CGFloat(index) * rowHeight
+            let values = [
+                "\(row.targetNumber)",
+                ScoreRules.displayValue(row.arrow1),
+                ScoreRules.displayValue(row.arrow2),
+                "\(row.targetTotal)",
+                "\(row.cumulativeTotal)",
+                row.scoreCount(11),
+                row.scoreCount(10),
+            ]
+            currentX = x
+
+            for (columnIndex, column) in columns.enumerated() {
+                let rect = CGRect(x: currentX, y: rowY, width: column.width, height: rowHeight)
+                stroke(rect)
+                drawText(values[columnIndex], in: rect.insetBy(dx: 2, dy: 4), font: .systemFont(ofSize: 9), color: .black, alignment: column.alignment)
+                currentX += column.width
+            }
+        }
+
+        drawTotalRow(
+            sheet,
+            columns: columns,
+            x: x,
+            y: y + headerHeight + CGFloat(sheet.rows.count) * rowHeight,
+            rowHeight: rowHeight
+        )
+    }
+
+    private static func drawTotalRow(
+        _ sheet: ArcherScoreSheet,
+        columns: [PDFColumn],
+        x: CGFloat,
+        y: CGFloat,
+        rowHeight: CGFloat
+    ) {
+        UIColor(white: 0.92, alpha: 1).setFill()
+        UIRectFill(CGRect(x: x, y: y, width: columns.reduce(0) { $0 + $1.width }, height: rowHeight))
+
+        let labelWidth = columns.prefix(3).reduce(0) { $0 + $1.width }
+        let labelRect = CGRect(x: x, y: y, width: labelWidth, height: rowHeight)
+        stroke(labelRect)
+        drawText("TOTAL GÉNÉRAL", in: labelRect.insetBy(dx: 4, dy: 4), font: .boldSystemFont(ofSize: 8), color: .black, alignment: .left)
+
+        let values = [
+            "\(sheet.breakdown.total)",
+            "\(sheet.breakdown.total)",
+            "\(sheet.breakdown.elevens)",
+            "\(sheet.breakdown.tens)",
+        ]
+        var currentX = x + labelWidth
+
+        for (index, column) in columns.dropFirst(3).enumerated() {
+            let rect = CGRect(x: currentX, y: y, width: column.width, height: rowHeight)
+            stroke(rect)
+            drawText(values[index], in: rect.insetBy(dx: 2, dy: 4), font: .boldSystemFont(ofSize: 9), color: .black, alignment: column.alignment)
+            currentX += column.width
+        }
+    }
+
+    private static func drawText(
+        _ text: String,
+        in rect: CGRect,
+        font: UIFont,
+        color: UIColor,
+        alignment: NSTextAlignment
+    ) {
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = alignment
+        paragraphStyle.lineBreakMode = .byTruncatingTail
+
+        (text as NSString).draw(
+            in: rect,
+            withAttributes: [
+                .font: font,
+                .foregroundColor: color,
+                .paragraphStyle: paragraphStyle,
+            ]
+        )
+    }
+
+    private static func stroke(_ rect: CGRect) {
+        UIColor.black.setStroke()
+        UIBezierPath(rect: rect).stroke()
+    }
+
+    private static func aspectFittedRect(for imageSize: CGSize, in boundingRect: CGRect) -> CGRect {
+        guard imageSize.width > 0, imageSize.height > 0 else { return boundingRect }
+
+        let scale = min(boundingRect.width / imageSize.width, boundingRect.height / imageSize.height)
+        let fittedSize = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
+
+        return CGRect(
+            x: boundingRect.midX - fittedSize.width / 2,
+            y: boundingRect.midY - fittedSize.height / 2,
+            width: fittedSize.width,
+            height: fittedSize.height
+        )
+    }
+
+    private static func formattedDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "fr_FR")
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+
+    private static func sanitizedFileName(_ name: String) -> String {
+        let forbiddenCharacters = CharacterSet(charactersIn: "/\\?%*|\"<>:")
+        return name
+            .components(separatedBy: forbiddenCharacters)
+            .joined(separator: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+private struct PDFColumn {
+    let title: String
+    let width: CGFloat
+    let alignment: NSTextAlignment
+}
+
+private extension ArcherScoreSheetRow {
+    func scoreCount(_ score: Int) -> String {
+        let count = [arrow1, arrow2].filter { $0 == score }.count
+        return count == 0 ? "" : "\(count)"
+    }
+}
+
+private struct ArcherScoreSheetRowView: View {
+    let row: ArcherScoreSheetRow
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text("\(row.targetNumber)")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(Score3DTheme.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            scoreCell(ScoreRules.displayValue(row.arrow1), width: 34)
+            scoreCell(ScoreRules.displayValue(row.arrow2), width: 34)
+            scoreCell("\(row.targetTotal)", width: 52, isStrong: true)
+            scoreCell("\(row.cumulativeTotal)", width: 58, isStrong: true)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Score3DTheme.border)
+                .frame(height: 1)
+        }
+    }
+
+    private func scoreCell(_ value: String, width: CGFloat, isStrong: Bool = false) -> some View {
+        Text(value)
+            .font(.body.monospacedDigit().weight(isStrong ? .semibold : .regular))
+            .foregroundStyle(isStrong ? Score3DTheme.textPrimary : Score3DTheme.textSecondary)
+            .frame(width: width, alignment: .trailing)
     }
 }
 

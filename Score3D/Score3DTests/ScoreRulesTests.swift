@@ -337,6 +337,30 @@ struct ScoreRulesTests {
         #expect(breakdown.misses == 1)
     }
 
+    @Test func archerScoreSheetKeepsTargetRowsBestArrowFirstAndCumulativeTotal() {
+        let calendar = Calendar(identifier: .gregorian)
+        let date = calendar.date(from: DateComponents(year: 2026, month: 8, day: 28))!
+        let entries = [
+            ScoreEntrySnapshot(archerName: "Alice", targetNumber: 17, arrow1: 11, arrow2: 10),
+            ScoreEntrySnapshot(archerName: "Bruno", targetNumber: 17, arrow1: 8, arrow2: 5),
+            ScoreEntrySnapshot(archerName: "Alice", targetNumber: 18, arrow1: 0, arrow2: 8),
+        ]
+
+        let sheet = ScoreSheetFormatter.makeSheet(
+            roundName: "Parcours club",
+            roundDate: date,
+            archerName: "Alice",
+            entries: entries
+        )
+
+        #expect(sheet.rows.map(\.targetNumber) == [17, 18])
+        #expect(sheet.rows.map(\.arrow1) == [11, 8])
+        #expect(sheet.rows.map(\.arrow2) == [10, 0])
+        #expect(sheet.rows.map(\.targetTotal) == [21, 8])
+        #expect(sheet.rows.map(\.cumulativeTotal) == [21, 29])
+        #expect(sheet.breakdown.total == 29)
+    }
+
     @Test @MainActor func leavingScoringKeepsRoundInProgressAndScoresPersisted() throws {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: Archer.self, ShootingRound.self, ScoreEntry.self, configurations: configuration)
