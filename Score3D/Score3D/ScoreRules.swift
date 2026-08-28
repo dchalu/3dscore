@@ -85,6 +85,69 @@ nonisolated struct ScoreBreakdown: Equatable, Sendable {
     }
 }
 
+nonisolated struct ArcherScoreSheet: Equatable, Identifiable, Sendable {
+    let roundName: String
+    let roundDate: Date
+    let archerName: String
+    let rows: [ArcherScoreSheetRow]
+    let breakdown: ScoreBreakdown
+
+    var id: String {
+        "\(roundName)-\(roundDate.timeIntervalSince1970)-\(archerName)"
+    }
+
+    var shareTitle: String {
+        "\(roundName) - \(archerName)"
+    }
+}
+
+nonisolated struct ArcherScoreSheetRow: Equatable, Sendable {
+    let targetNumber: Int
+    let arrow1: Int?
+    let arrow2: Int?
+    let targetTotal: Int
+    let cumulativeTotal: Int
+}
+
+nonisolated struct ScoreSheetFormatter: Sendable {
+    static func makeSheet(
+        roundName: String,
+        roundDate: Date,
+        archerName: String,
+        entries: [ScoreEntrySnapshot]
+    ) -> ArcherScoreSheet {
+        var cumulativeTotal = 0
+        let archerEntries = entries.filter { $0.archerName == archerName }
+        let rows = archerEntries.map { entry in
+            let targetTotal = ScoreRules.targetTotal(arrow1: entry.arrow1, arrow2: entry.arrow2)
+            let displayArrows = orderedDisplayArrows(arrow1: entry.arrow1, arrow2: entry.arrow2)
+            cumulativeTotal += targetTotal
+
+            return ArcherScoreSheetRow(
+                targetNumber: entry.targetNumber,
+                arrow1: displayArrows.first,
+                arrow2: displayArrows.second,
+                targetTotal: targetTotal,
+                cumulativeTotal: cumulativeTotal
+            )
+        }
+
+        return ArcherScoreSheet(
+            roundName: roundName,
+            roundDate: roundDate,
+            archerName: archerName,
+            rows: rows,
+            breakdown: ScoreRules.scoreBreakdown(entries: entries, archerName: archerName)
+        )
+    }
+
+    static func orderedDisplayArrows(arrow1: Int?, arrow2: Int?) -> (first: Int?, second: Int?) {
+        guard let arrow1 else { return (arrow2, nil) }
+        guard let arrow2 else { return (arrow1, nil) }
+        return arrow1 >= arrow2 ? (arrow1, arrow2) : (arrow2, arrow1)
+    }
+}
+
 nonisolated struct RoundSetupRules: Sendable {
     static func defaultRoundName(for date: Date) -> String {
         let formatter = DateFormatter()

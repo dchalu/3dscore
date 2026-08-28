@@ -143,6 +143,15 @@ final class ShootingRound {
         ScoreRules.scoreBreakdown(entries: entries.map(\.snapshot), archerName: archerName)
     }
 
+    func scoreSheet(for archerName: String) -> ArcherScoreSheet {
+        ScoreSheetFormatter.makeSheet(
+            roundName: name,
+            roundDate: date,
+            archerName: archerName,
+            entries: orderedEntries.map(\.snapshot)
+        )
+    }
+
     private var completedTargetIndexes: Set<Int> {
         let archerCount = archerNames.count
         guard archerCount > 0 else { return [] }
