@@ -1,4 +1,16 @@
 .DS_Store
+
+# Xcode user state
 xcuserdata/
 *.xcuserstate
+*.xcscmblueprint
+
+# Build products and local indexes
 DerivedData/
+**/DerivedData/
+build/
+*.moved-aside
+
+# SwiftPM local cache
+.build/
+.swiftpm/
