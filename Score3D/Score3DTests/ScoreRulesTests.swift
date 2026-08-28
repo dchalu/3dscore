@@ -86,6 +86,20 @@ struct ScoreRulesTests {
         #expect(uniqueName == "Parcours du 27 août 2026 3")
     }
 
+    @Test func emptyRoundNameFallsBackToDefaultDateName() {
+        let calendar = Calendar(identifier: .gregorian)
+        let date = calendar.date(from: DateComponents(year: 2026, month: 8, day: 27))!
+
+        let uniqueName = RoundSetupRules.uniqueRoundName(
+            baseName: "   ",
+            date: date,
+            existingRounds: [],
+            calendar: calendar
+        )
+
+        #expect(uniqueName == RoundSetupRules.defaultRoundName(for: date))
+    }
+
     @Test func roundCreationCanStartWithoutStoredArchers() {
         #expect(RoundSetupRules.resolvedPelotonNames([""]) == ["Archer 1"])
     }

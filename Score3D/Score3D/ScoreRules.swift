@@ -121,22 +121,23 @@ nonisolated struct RoundSetupRules: Sendable {
         calendar: Calendar = .current
     ) -> String {
         let normalizedBaseName = normalizedArcherName(baseName)
+        let resolvedBaseName = normalizedBaseName.isEmpty ? defaultRoundName(for: date) : normalizedBaseName
         let sameDayNames = Set(
             existingRounds
                 .filter { calendar.isDate($0.date, inSameDayAs: date) }
                 .map(\.name)
         )
 
-        guard sameDayNames.contains(normalizedBaseName) else {
-            return normalizedBaseName
+        guard sameDayNames.contains(resolvedBaseName) else {
+            return resolvedBaseName
         }
 
         var suffix = 2
-        while sameDayNames.contains("\(normalizedBaseName) \(suffix)") {
+        while sameDayNames.contains("\(resolvedBaseName) \(suffix)") {
             suffix += 1
         }
 
-        return "\(normalizedBaseName) \(suffix)"
+        return "\(resolvedBaseName) \(suffix)"
     }
 
     static func containsDuplicateArcherNames(_ names: [String]) -> Bool {

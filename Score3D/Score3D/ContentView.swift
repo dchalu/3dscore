@@ -2,6 +2,134 @@ import SwiftData
 import SwiftUI
 import UIKit
 
+private enum Score3DTheme {
+    static let background = adaptiveColor(light: 0xF5F3EC, dark: 0x111612)
+    static let surface = adaptiveColor(light: 0xFCFBF7, dark: 0x1A201B)
+    static let textPrimary = adaptiveColor(light: 0x1E2521, dark: 0xF1F3EE)
+    static let textSecondary = adaptiveColor(light: 0x6F756F, dark: 0xA8AEA8)
+    static let forest = adaptiveColor(light: 0x28513D, dark: 0x8CB7A0)
+    static let paleForest = adaptiveColor(light: 0xE7EEE8, dark: 0x26362D)
+    static let interaction = adaptiveColor(light: 0x2878C8, dark: 0x7BB7F0)
+    static let selection = adaptiveColor(light: 0xE5F1FB, dark: 0x17314A)
+    static let border = adaptiveColor(light: 0xD9DDD7, dark: 0x3B463F)
+
+    private static func adaptiveColor(light: UInt32, dark: UInt32) -> Color {
+        Color(UIColor { traits in
+            UIColor(hex: traits.userInterfaceStyle == .dark ? dark : light)
+        })
+    }
+}
+
+private extension UIColor {
+    convenience init(hex: UInt32) {
+        self.init(
+            red: CGFloat((hex >> 16) & 0xFF) / 255,
+            green: CGFloat((hex >> 8) & 0xFF) / 255,
+            blue: CGFloat(hex & 0xFF) / 255,
+            alpha: 1
+        )
+    }
+}
+
+private struct PrimaryActionButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(.white)
+            .background(
+                isEnabled
+                ? Score3DTheme.forest.opacity(configuration.isPressed ? 0.82 : 1)
+                : Score3DTheme.border
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+private struct ScoreValueButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(isEnabled ? Score3DTheme.textPrimary : Score3DTheme.textSecondary)
+            .background(
+                isEnabled
+                ? Score3DTheme.surface.opacity(configuration.isPressed ? 0.72 : 1)
+                : Score3DTheme.paleForest.opacity(0.55)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(isEnabled ? Score3DTheme.interaction : Score3DTheme.border.opacity(0.65), lineWidth: 1.5)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+private struct StatusBadge: View {
+    let text: String
+    let isFinished: Bool
+
+    var body: some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(isFinished ? Score3DTheme.textSecondary : Score3DTheme.interaction)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(isFinished ? Score3DTheme.paleForest : Score3DTheme.selection, in: Capsule())
+    }
+}
+
+private struct PersistenceAlert: Identifiable {
+    let id = UUID()
+    let message: String
+}
+
+private struct Score3DBrandMark: View {
+    var body: some View {
+        Image("Score3DHomeLogo")
+            .resizable()
+            .scaledToFit()
+            .frame(maxWidth: 280)
+            .accessibilityLabel("Score3D")
+    }
+}
+
+private struct SegmentedTargetProgressView: View {
+    let currentIndex: Int
+    let completedIndexes: Set<Int>
+    let targetCount: Int
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<targetCount, id: \.self) { index in
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(fillColor(for: index))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .stroke(strokeColor(for: index), lineWidth: 1)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 8, maxHeight: 8)
+            }
+        }
+        .accessibilityLabel("Progression du parcours")
+        .accessibilityValue("\(min(currentIndex + 1, targetCount)) sur \(targetCount) cibles")
+    }
+
+    private func fillColor(for index: Int) -> Color {
+        if index == currentIndex { return Score3DTheme.interaction }
+        if completedIndexes.contains(index) { return Score3DTheme.forest }
+        return Score3DTheme.surface
+    }
+
+    private func strokeColor(for index: Int) -> Color {
+        if index == currentIndex { return Score3DTheme.interaction }
+        if completedIndexes.contains(index) { return Score3DTheme.forest }
+        return Score3DTheme.border
+    }
+}
+
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ShootingRound.date, order: .reverse) private var rounds: [ShootingRound]
@@ -10,29 +138,29 @@ struct ContentView: View {
     @State private var roundPendingDeletion: ShootingRound?
     @State private var selectedRound: ShootingRound?
     @State private var pendingCreatedRound: ShootingRound?
+    @State private var persistenceAlert: PersistenceAlert?
 
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    Text("Score3D")
-                        .font(.largeTitle.bold())
+                    Score3DBrandMark()
                         .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 18)
-                        .padding(.bottom, 20)
-                        .listRowInsets(EdgeInsets(top: 0, leading: 22, bottom: 0, trailing: 22))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                        .padding(.top, 12)
+                        .padding(.bottom, 22)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 22, bottom: 0, trailing: 22))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
 
                     Button {
                         isShowingNewRound = true
                     } label: {
                         Text("Nouveau parcours")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .font(.title3.weight(.semibold))
+                            .frame(maxWidth: .infinity, minHeight: 52)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 22, bottom: 20, trailing: 22))
+                    .buttonStyle(PrimaryActionButtonStyle())
+                    .listRowInsets(EdgeInsets(top: 0, leading: 22, bottom: 24, trailing: 22))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                 }
@@ -40,7 +168,9 @@ struct ContentView: View {
                 Section {
                         if rounds.isEmpty {
                             Text("Aucun parcours")
-                                .foregroundStyle(.secondary)
+                                .font(.body)
+                                .foregroundStyle(Score3DTheme.textSecondary)
+                                .listRowBackground(Color.clear)
                         } else {
                             ForEach(rounds) { round in
                                 Button {
@@ -60,11 +190,17 @@ struct ContentView: View {
                         }
                 } header: {
                     Text("Parcours")
-                        .font(.headline)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(Score3DTheme.textPrimary)
                         .textCase(nil)
                 }
+                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                .listRowBackground(Color.clear)
             }
-            .listStyle(.insetGrouped)
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(Score3DTheme.background)
+            .tint(Score3DTheme.interaction)
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $isShowingNewRound) {
@@ -90,6 +226,13 @@ struct ContentView: View {
                 if let roundPendingDeletion {
                     Text("« \(roundPendingDeletion.name) » et tous les scores associés seront définitivement supprimés.")
                 }
+            }
+            .alert(item: $persistenceAlert) { alert in
+                Alert(
+                    title: Text("Sauvegarde impossible"),
+                    message: Text(alert.message),
+                    dismissButton: .default(Text("OK"))
+                )
             }
         }
     }
@@ -118,7 +261,13 @@ struct ContentView: View {
         guard let round = roundPendingDeletion else { return }
         modelContext.delete(round)
         roundPendingDeletion = nil
-        try? modelContext.save()
+
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            persistenceAlert = PersistenceAlert(message: "Le parcours n’a pas pu être supprimé. Réessayez avant de fermer l’app.")
+        }
     }
 }
 
@@ -128,25 +277,36 @@ private struct RoundRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(round.name)
-                .font(.headline)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(Score3DTheme.textPrimary)
                 .lineLimit(1)
 
             Text(round.date, format: .dateTime.day().month(.wide).year())
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .font(.callout)
+                .foregroundStyle(Score3DTheme.textSecondary)
 
             HStack {
                 Text("\(round.completedTargetCount) / 24 cibles")
-                    .font(.subheadline)
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(Score3DTheme.textPrimary)
                 Spacer()
-                Text(RoundListRules.statusLabel(isFinished: round.isFinished))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(round.isFinished ? Color.secondary : Color.accentColor)
+                StatusBadge(text: RoundListRules.statusLabel(isFinished: round.isFinished), isFinished: round.isFinished)
             }
 
-            ProgressView(value: Double(round.completedTargetCount), total: 24)
+            SegmentedTargetProgressView(
+                currentIndex: -1,
+                completedIndexes: Set(0..<round.completedTargetCount),
+                targetCount: 24
+            )
+            .padding(.top, 4)
         }
-        .padding(.vertical, 6)
+        .padding(14)
+        .background(Score3DTheme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Score3DTheme.border, lineWidth: 1)
+        }
+        .padding(.vertical, 3)
     }
 }
 
@@ -157,25 +317,35 @@ struct RoundSummaryView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 10) {
                     Text(round.name)
-                        .font(.title)
+                        .font(.system(size: 30, weight: .semibold))
+                        .foregroundStyle(Score3DTheme.textPrimary)
                         .lineLimit(2)
 
                     Text(round.date, format: .dateTime.day().month(.wide).year())
                         .font(.body)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Score3DTheme.textSecondary)
 
                     HStack {
                         Text("24 / 24 cibles")
                             .font(.body.weight(.semibold))
+                            .foregroundStyle(Score3DTheme.textPrimary)
                         Spacer()
-                        Text("Terminé")
-                            .font(.callout.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                        StatusBadge(text: "Terminé", isFinished: true)
                     }
 
-                    ProgressView(value: 24, total: 24)
+                    SegmentedTargetProgressView(
+                        currentIndex: -1,
+                        completedIndexes: Set(0..<24),
+                        targetCount: 24
+                    )
+                }
+                .padding(16)
+                .background(Score3DTheme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Score3DTheme.border, lineWidth: 1)
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
@@ -189,15 +359,18 @@ struct RoundSummaryView: View {
                 } label: {
                     Text("Retour à l’accueil")
                         .font(.title3.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 50)
+                        .frame(maxWidth: .infinity, minHeight: 54)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(PrimaryActionButtonStyle())
                 .padding(.top, 6)
             }
             .padding()
         }
+        .background(Score3DTheme.background)
+        .tint(Score3DTheme.interaction)
         .navigationTitle("Parcours terminé")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
     }
 }
 
@@ -205,49 +378,51 @@ private struct ArcherSummaryRow: View {
     let breakdown: ScoreBreakdown
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
-                Text(breakdown.archerName)
-                    .font(.title3.weight(.semibold))
+                Text(breakdown.archerName.uppercased())
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(Score3DTheme.textSecondary)
                     .lineLimit(1)
 
                 Spacer()
 
                 Text("\(breakdown.total) pts")
-                    .font(.title2.monospacedDigit().bold())
+                    .font(.system(size: 30, weight: .bold, design: .default).monospacedDigit())
+                    .foregroundStyle(Score3DTheme.textPrimary)
             }
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 74), spacing: 8)], spacing: 8) {
-                summaryChip("11", breakdown.elevens)
-                summaryChip("10", breakdown.tens)
-                summaryChip("8", breakdown.eights)
-                summaryChip("5", breakdown.fives)
-                summaryChip("M", breakdown.misses)
+            HStack(spacing: 6) {
+                summaryStat("11", breakdown.elevens)
+                summaryStat("10", breakdown.tens)
+                summaryStat("8", breakdown.eights)
+                summaryStat("5", breakdown.fives)
+                summaryStat("M", breakdown.misses)
             }
         }
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 8))
+        .padding(14)
+        .background(Score3DTheme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Score3DTheme.border, lineWidth: 1)
+        }
     }
 
-    private func summaryChip(_ label: String, _ value: Int) -> some View {
-        HStack(spacing: 6) {
+    private func summaryStat(_ label: String, _ value: Int) -> some View {
+        VStack(spacing: 5) {
             Text(label)
                 .font(.callout.weight(.semibold))
-                .frame(minWidth: 34, minHeight: 28)
-                .background(Color(.tertiarySystemGroupedBackground), in: Capsule())
-                .overlay {
-                    Capsule()
-                        .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
-                }
-
-            Text(":")
-                .font(.callout.weight(.semibold))
-                .foregroundStyle(.secondary)
-
+                .foregroundStyle(Score3DTheme.textPrimary)
             Text("\(value)")
                 .font(.callout.monospacedDigit().weight(.semibold))
+                .foregroundStyle(Score3DTheme.textSecondary)
         }
-        .frame(maxWidth: .infinity, minHeight: 34, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 50)
+        .background(Score3DTheme.paleForest.opacity(0.55), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Score3DTheme.border, lineWidth: 1)
+        }
     }
 }
 
@@ -261,6 +436,7 @@ struct NewRoundFlowView: View {
     @State private var initialSettings = RoundDraftSettings(date: .now)
     @State private var slots = [RoundArcherSlot()]
     @State private var isShowingCancelConfirmation = false
+    @State private var persistenceAlert: PersistenceAlert?
     @State private var datePickerID = UUID()
     @FocusState private var focusedSlotID: UUID?
 
@@ -269,6 +445,7 @@ struct NewRoundFlowView: View {
             Form {
                 Section("Parcours") {
                     TextField("Nom du parcours", text: $settings.name)
+                        .foregroundStyle(Score3DTheme.textPrimary)
                         .textInputAutocapitalization(.sentences)
                         .submitLabel(.done)
                         .onChange(of: settings.name) { _, newValue in
@@ -288,6 +465,7 @@ struct NewRoundFlowView: View {
                         }
                     }
                 }
+                .listRowBackground(Score3DTheme.surface)
 
                 Section {
                     ForEach($slots) { $slot in
@@ -296,7 +474,8 @@ struct NewRoundFlowView: View {
                             index: index,
                             slot: $slot,
                             focusedSlotID: $focusedSlotID,
-                            canRemove: canRemoveSlot(at: index)
+                            canRemove: canRemoveSlot(at: index),
+                            removeAction: { removeSlot(slot) }
                         )
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             if canRemoveSlot(at: index) {
@@ -315,33 +494,41 @@ struct NewRoundFlowView: View {
                         } label: {
                             Label("Ajouter un archer", systemImage: "plus")
                         }
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Score3DTheme.interaction)
                     } else {
                         Label("6 archers maximum", systemImage: "checkmark.circle")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Score3DTheme.textSecondary)
                     }
                 } header: {
                     Text("Peloton")
+                        .foregroundStyle(Score3DTheme.textPrimary)
                 } footer: {
                     if hasDuplicateNames {
                         Text("Chaque archer du peloton doit avoir un nom distinct.")
                             .foregroundStyle(.red)
                     } else {
                         Text("Le peloton contient 1 à 6 archers. Les archers seront triés alphabétiquement pour le parcours.")
+                            .foregroundStyle(Score3DTheme.textSecondary)
                     }
                 }
+                .listRowBackground(Score3DTheme.surface)
 
                 Section {
                     Button(action: startRound) {
                         Text("Démarrer le parcours")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .font(.title3.weight(.semibold))
+                            .frame(maxWidth: .infinity, minHeight: 54)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(PrimaryActionButtonStyle())
                     .disabled(!canStartRound)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     .listRowBackground(Color.clear)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Score3DTheme.background)
+            .tint(Score3DTheme.interaction)
             .navigationTitle("Nouveau parcours")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -356,6 +543,13 @@ struct NewRoundFlowView: View {
                 }
             } message: {
                 Text("Les informations saisies pour ce parcours seront perdues.")
+            }
+            .alert(item: $persistenceAlert) { alert in
+                Alert(
+                    title: Text("Sauvegarde impossible"),
+                    message: Text(alert.message),
+                    dismissButton: .default(Text("OK"))
+                )
             }
             .onAppear {
                 initialSettings = settings
@@ -425,8 +619,14 @@ struct NewRoundFlowView: View {
             archerNames: validNames
         )
         modelContext.insert(round)
-        try? modelContext.save()
-        onRoundCreated(round)
+
+        do {
+            try modelContext.save()
+            onRoundCreated(round)
+        } catch {
+            modelContext.rollback()
+            persistenceAlert = PersistenceAlert(message: "Le parcours n’a pas pu être créé. Réessayez avant de fermer l’app.")
+        }
     }
 }
 
@@ -435,28 +635,31 @@ private struct RoundArcherSlotView: View {
     @Binding var slot: RoundArcherSlot
     var focusedSlotID: FocusState<UUID?>.Binding
     let canRemove: Bool
+    let removeAction: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Archer \(index)")
                     .font(.headline)
+                    .foregroundStyle(Score3DTheme.textPrimary)
 
                 TextField("Archer \(index)", text: $slot.name)
+                    .foregroundStyle(Score3DTheme.textPrimary)
                     .textInputAutocapitalization(.words)
                     .submitLabel(.done)
                     .focused(focusedSlotID, equals: slot.id)
             }
 
             if canRemove {
-                Button(action: {}) {
+                Button(action: removeAction) {
                     Image(systemName: "minus.circle")
                         .font(.title2)
                         .frame(width: 44, height: 44)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-                .accessibilityLabel("La suppression se fait en balayant la ligne vers la gauche")
+                .foregroundStyle(Score3DTheme.textSecondary)
+                .accessibilityLabel("Supprimer Archer \(index)")
             }
         }
         .padding(.vertical, 4)
@@ -512,6 +715,7 @@ struct ScoringView: View {
     @State private var selectedArrow: ArrowSlot?
     @State private var correctionReturnArcherIndex: Int?
     @State private var isShowingCompletedArrowCorrection = false
+    @State private var persistenceAlert: PersistenceAlert?
 
     var body: some View {
         if round.isFinished {
@@ -525,13 +729,13 @@ struct ScoringView: View {
         VStack(spacing: 0) {
             if let entry = round.activeEntry {
                 scoringTopBar
-                    .padding(.bottom, 16)
+                    .padding(.bottom, 14)
                 targetProgressHeader(for: entry)
-                    .padding(.bottom, 28)
+                    .padding(.bottom, 24)
                 archerList
                 Spacer(minLength: 8)
                 scoringPanel(for: entry)
-                    .padding(.bottom, 26)
+                    .padding(.bottom, 28)
                 primaryActionButton(for: entry)
             } else {
                 ContentUnavailableView("Parcours indisponible", systemImage: "exclamationmark.triangle")
@@ -540,11 +744,20 @@ struct ScoringView: View {
         .padding(.horizontal, 10)
         .padding(.bottom, 8)
         .safeAreaPadding(.top, 8)
+        .background(Score3DTheme.background)
+        .tint(Score3DTheme.interaction)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
         .onAppear(perform: refreshSelectedArrowForActiveEntry)
+        .alert(item: $persistenceAlert) { alert in
+            Alert(
+                title: Text("Sauvegarde impossible"),
+                message: Text(alert.message),
+                dismissButton: .default(Text("OK"))
+            )
+        }
     }
 
     private var scoringTopBar: some View {
@@ -555,13 +768,19 @@ struct ScoringView: View {
                 Image(systemName: "chevron.left")
                     .font(.title3.weight(.semibold))
                     .frame(width: 44, height: 44)
-                    .background(.thinMaterial, in: Circle())
+                    .background(Score3DTheme.surface, in: Circle())
+                    .overlay {
+                        Circle()
+                            .stroke(Score3DTheme.border, lineWidth: 1)
+                    }
             }
             .buttonStyle(.plain)
+            .foregroundStyle(Score3DTheme.interaction)
             .accessibilityLabel("Quitter le parcours")
 
             Text(round.name)
                 .font(.title3)
+                .foregroundStyle(Score3DTheme.textSecondary)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -578,11 +797,15 @@ struct ScoringView: View {
 
             VStack(spacing: 4) {
                 Text("Cible \(entry.targetNumber) / 24")
-                    .font(.title.bold())
+                    .font(.system(size: 30, weight: .bold, design: .default))
+                    .foregroundStyle(Score3DTheme.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                ProgressView(value: Double(round.currentTargetIndex + 1), total: 24)
-                    .scaleEffect(x: 1, y: 1.25, anchor: .center)
+                SegmentedTargetProgressView(
+                    currentIndex: round.currentTargetIndex,
+                    completedIndexes: completedTargetIndexesForProgress,
+                    targetCount: 24
+                )
             }
 
             targetNavigationButton(
@@ -604,29 +827,33 @@ struct ScoringView: View {
             Image(systemName: systemImage)
                 .font(.headline.weight(.semibold))
                 .frame(width: 36, height: 36)
-                .background(Color(.secondarySystemGroupedBackground), in: Circle())
+                .background(Score3DTheme.surface, in: Circle())
+                .overlay {
+                    Circle()
+                        .stroke(Score3DTheme.border.opacity(isEnabled ? 1 : 0.55), lineWidth: 1)
+                }
         }
         .buttonStyle(.plain)
-        .foregroundStyle(isEnabled ? Color.accentColor : Color.secondary.opacity(0.45))
+        .foregroundStyle(isEnabled ? Score3DTheme.interaction : Score3DTheme.textSecondary.opacity(0.45))
         .disabled(!isEnabled)
         .accessibilityLabel(accessibilityLabel)
     }
 
     private var archerList: some View {
-        VStack(spacing: 3) {
+        VStack(spacing: 2) {
             HStack(spacing: 6) {
                 Spacer(minLength: 0)
 
                 HStack(spacing: 6) {
                     Text("F1")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(Score3DTheme.textSecondary)
                         .frame(width: 32, alignment: .trailing)
                         .accessibilityLabel("Flèche 1")
 
                     Text("F2")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(Score3DTheme.textSecondary)
                         .frame(width: 32, alignment: .trailing)
                         .accessibilityLabel("Flèche 2")
 
@@ -634,13 +861,13 @@ struct ScoringView: View {
                         .frame(width: 12, height: 1)
 
                     Text("Total")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(Score3DTheme.textSecondary)
                         .frame(width: 40, alignment: .trailing)
 
                     Text("Cumul")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(Score3DTheme.textSecondary)
                         .frame(width: 46, alignment: .trailing)
                 }
             }
@@ -653,27 +880,27 @@ struct ScoringView: View {
                 } label: {
                     HStack(spacing: 6) {
                         RoundedRectangle(cornerRadius: 1.5)
-                            .fill(index == round.currentArcherIndex ? Color.accentColor : Color.clear)
-                            .frame(width: 3, height: 22)
+                            .fill(index == round.currentArcherIndex ? Score3DTheme.interaction : Color.clear)
+                            .frame(width: 4, height: 24)
 
                         Text(name)
-                            .font(.title3.weight(index == round.currentArcherIndex ? .semibold : .regular))
+                            .font(.system(size: index == round.currentArcherIndex ? 21 : 19, weight: index == round.currentArcherIndex ? .semibold : .regular))
                             .lineLimit(1)
                             .minimumScaleFactor(0.75)
-                            .foregroundStyle(index == round.currentArcherIndex ? .primary : .secondary)
+                            .foregroundStyle(index == round.currentArcherIndex ? Score3DTheme.textPrimary : Score3DTheme.textSecondary)
 
                         Spacer(minLength: 6)
 
                         HStack(spacing: 6) {
                             Text(ScoreRules.displayValue(entry?.arrow1))
-                                .font(.title3.monospacedDigit().weight(.regular))
-                                .foregroundStyle(index == round.currentArcherIndex ? .primary : .secondary)
+                                .font(.system(size: 20, weight: .regular, design: .default).monospacedDigit())
+                                .foregroundStyle(index == round.currentArcherIndex ? Score3DTheme.textPrimary : Score3DTheme.textSecondary)
                                 .frame(width: 32, alignment: .trailing)
                                 .accessibilityLabel("Flèche 1 \(ScoreRules.displayValue(entry?.arrow1))")
 
                             Text(ScoreRules.displayValue(entry?.arrow2))
-                                .font(.title3.monospacedDigit().weight(.regular))
-                                .foregroundStyle(index == round.currentArcherIndex ? .primary : .secondary)
+                                .font(.system(size: 20, weight: .regular, design: .default).monospacedDigit())
+                                .foregroundStyle(index == round.currentArcherIndex ? Score3DTheme.textPrimary : Score3DTheme.textSecondary)
                                 .frame(width: 32, alignment: .trailing)
                                 .accessibilityLabel("Flèche 2 \(ScoreRules.displayValue(entry?.arrow2))")
 
@@ -681,23 +908,23 @@ struct ScoringView: View {
                                 .frame(width: 12, height: 1)
 
                             Text("\(entry?.targetTotal ?? 0)")
-                                .font(.title3.monospacedDigit().weight(index == round.currentArcherIndex ? .bold : .regular))
-                                .foregroundStyle(index == round.currentArcherIndex ? .primary : .secondary)
+                                .font(.system(size: 20, weight: index == round.currentArcherIndex ? .bold : .regular, design: .default).monospacedDigit())
+                                .foregroundStyle(index == round.currentArcherIndex ? Score3DTheme.textPrimary : Score3DTheme.textSecondary)
                                 .frame(width: 40, alignment: .trailing)
 
                             Text("\(round.total(for: name))")
-                                .font(.title3.monospacedDigit().weight(index == round.currentArcherIndex ? .bold : .regular))
-                                .foregroundStyle(index == round.currentArcherIndex ? .primary : .secondary)
+                                .font(.system(size: 20, weight: index == round.currentArcherIndex ? .bold : .regular, design: .default).monospacedDigit())
+                                .foregroundStyle(index == round.currentArcherIndex ? Score3DTheme.textPrimary : Score3DTheme.textSecondary)
                                 .frame(width: 46, alignment: .trailing)
                         }
                     }
-                    .frame(maxWidth: .infinity, minHeight: 40)
+                    .frame(maxWidth: .infinity, minHeight: 42)
                     .padding(.horizontal, 8)
                     .background(
                         index == round.currentArcherIndex
-                        ? Color.accentColor.opacity(0.12)
-                        : Color(.secondarySystemGroupedBackground).opacity(0.55),
-                        in: RoundedRectangle(cornerRadius: 8)
+                        ? Score3DTheme.selection
+                        : Color.clear,
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                     )
                 }
                 .buttonStyle(.plain)
@@ -739,11 +966,16 @@ struct ScoringView: View {
             VStack(spacing: 3) {
                 Text("Total")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Score3DTheme.textSecondary)
                 Text("\(entry.targetTotal)")
-                    .font(.title2.monospacedDigit().bold())
-                    .frame(maxWidth: .infinity, minHeight: 40)
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+                    .font(.system(size: 28, weight: .bold, design: .default).monospacedDigit())
+                    .foregroundStyle(Score3DTheme.textPrimary)
+                    .frame(maxWidth: .infinity, minHeight: 42)
+                    .background(Score3DTheme.paleForest, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(Score3DTheme.border, lineWidth: 1)
+                    }
             }
         }
     }
@@ -752,13 +984,14 @@ struct ScoringView: View {
         HStack(spacing: 6) {
             ForEach(ArrowScore.allCases) { score in
                 Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     apply(score, to: entry)
                 } label: {
                     Text(score.label)
                         .font(.title2.bold())
-                        .frame(maxWidth: .infinity, minHeight: 46)
+                        .frame(maxWidth: .infinity, minHeight: 50)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(ScoreValueButtonStyle())
                 .disabled(!ArrowInputRules.isScoreInputEnabled(selectedArrow: selectedArrow))
             }
         }
@@ -766,13 +999,14 @@ struct ScoringView: View {
 
     private func primaryActionButton(for entry: ScoreEntry) -> some View {
         Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             performPrimaryAction(for: entry)
         } label: {
             Text(primaryActionTitle(for: entry))
                 .font(.title3.weight(.semibold))
-                .frame(maxWidth: .infinity, minHeight: 50)
+                .frame(maxWidth: .infinity, minHeight: 54)
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(PrimaryActionButtonStyle())
         .disabled(isPrimaryActionDisabled(for: entry))
     }
 
@@ -811,6 +1045,16 @@ struct ScoringView: View {
 
     private var scoredArcherIndexesForCurrentTarget: Set<Int> {
         Set(entriesForCurrentTarget.filter(\.hasTwoArrows).map(\.archerOrder))
+    }
+
+    private var completedTargetIndexesForProgress: Set<Int> {
+        let archerCount = round.archerNames.count
+        guard archerCount > 0 else { return [] }
+
+        return Set((0..<24).filter { targetIndex in
+            let targetEntries = round.entries.filter { $0.targetOrderIndex == targetIndex }
+            return targetEntries.count == archerCount && targetEntries.allSatisfy { $0.isValidated && $0.hasTwoArrows }
+        })
     }
 
     private var hasIncompleteArcherOtherThanCurrent: Bool {
@@ -937,7 +1181,14 @@ struct ScoringView: View {
     }
 
     private func save() {
-        try? modelContext.save()
+        do {
+            guard modelContext.hasChanges else { return }
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            refreshSelectedArrowForActiveEntry()
+            persistenceAlert = PersistenceAlert(message: "La dernière modification n’a pas pu être enregistrée. Réessayez avant de fermer l’app.")
+        }
     }
 }
 
@@ -958,13 +1209,14 @@ private struct ArrowValueButton: View {
         VStack(spacing: 3) {
             Text(title)
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Score3DTheme.textSecondary)
 
             HStack(spacing: 8) {
                 Spacer(minLength: 0)
 
                 Text(value)
-                    .font(.title.monospacedDigit().bold())
+                    .font(.system(size: 30, weight: .bold, design: .default).monospacedDigit())
+                    .foregroundStyle(Score3DTheme.textPrimary)
 
                 if canDelete {
                     Button(action: deleteAction) {
@@ -973,7 +1225,7 @@ private struct ArrowValueButton: View {
                             .frame(width: 36, height: 36)
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Score3DTheme.textSecondary)
                     .accessibilityLabel("Supprimer la valeur de \(title)")
                 }
 
@@ -983,13 +1235,13 @@ private struct ArrowValueButton: View {
         }
         .padding(.vertical, 5)
         .frame(maxWidth: .infinity)
-        .background(isSelected ? Color.accentColor.opacity(0.18) : Color(.secondarySystemGroupedBackground))
+        .background(isSelected ? Score3DTheme.selection : Score3DTheme.surface)
         .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(isSelected ? Score3DTheme.interaction : Score3DTheme.border, lineWidth: isSelected ? 2 : 1)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .contentShape(RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .onTapGesture(perform: action)
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.isButton)
