@@ -360,6 +360,8 @@ struct RoundSummaryView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
+                summaryTopBar
+
                 VStack(alignment: .leading, spacing: 10) {
                     Text(round.name)
                         .font(.system(size: 30, weight: .semibold))
@@ -416,9 +418,36 @@ struct RoundSummaryView: View {
         }
         .background(Score3DTheme.background)
         .tint(Score3DTheme.interaction)
-        .navigationTitle("Parcours terminé")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
+    }
+
+    private var summaryTopBar: some View {
+        HStack(spacing: 10) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.title3.weight(.semibold))
+                    .frame(width: 44, height: 44)
+                    .background(Score3DTheme.surface, in: Circle())
+                    .overlay {
+                        Circle()
+                            .stroke(Score3DTheme.border, lineWidth: 1)
+                    }
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Score3DTheme.interaction)
+            .accessibilityLabel("Retour à l’accueil")
+
+            Text("Parcours terminé")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(Score3DTheme.textSecondary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }
 
