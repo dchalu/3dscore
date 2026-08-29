@@ -23,12 +23,22 @@
                                     <constraint firstAttribute="height" constant="280" id="rhN-Kf-vu7"/>
                                 </constraints>
                             </imageView>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Une app à roulettes mobiles !" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="slogan-label">
+                                <rect key="frame" x="32" y="584" width="329" height="26"/>
+                                <fontDescription key="fontDescription" name="AvenirNext-DemiBold" family="Avenir Next" pointSize="20"/>
+                                <color key="textColor" red="0.1568627451" green="0.3176470588" blue="0.2392156863" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <nil key="highlightedColor"/>
+                            </label>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
                         <color key="backgroundColor" name="Score3DLaunchBackground"/>
                         <constraints>
                             <constraint firstItem="6M8-Rk-cpa" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="HtE-R4-7db"/>
                             <constraint firstItem="6M8-Rk-cpa" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="fw9-aN-e6d"/>
+                            <constraint firstItem="slogan-label" firstAttribute="top" secondItem="6M8-Rk-cpa" secondAttribute="bottom" constant="18" id="TA9-PN-QU2"/>
+                            <constraint firstItem="slogan-label" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="Wa4-sR-sY3"/>
+                            <constraint firstItem="slogan-label" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="Bcu-3y-fUS" secondAttribute="leading" constant="28" id="dC4-mU-z8V"/>
+                            <constraint firstItem="Bcu-3y-fUS" firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="slogan-label" secondAttribute="trailing" constant="28" id="zYX-69-C8k"/>
                         </constraints>
                     </view>
                 </viewController>
