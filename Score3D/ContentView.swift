@@ -136,6 +136,7 @@ struct ContentView: View {
 
     @State private var isShowingNewRound = false
     @State private var roundPendingDeletion: ShootingRound?
+    @State private var roundPendingEdition: ShootingRound?
     @State private var selectedRound: ShootingRound?
     @State private var pendingCreatedRound: ShootingRound?
     @State private var persistenceAlert: PersistenceAlert?
@@ -152,50 +153,60 @@ struct ContentView: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
 
-                    Button {
-                        isShowingNewRound = true
-                    } label: {
-                        Text("Nouveau parcours")
-                            .font(.title3.weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 52)
-                    }
-                    .buttonStyle(PrimaryActionButtonStyle())
-                    .listRowInsets(EdgeInsets(top: 0, leading: 22, bottom: 24, trailing: 22))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
                 }
 
                 Section {
-                        if rounds.isEmpty {
-                            Text("Aucun parcours")
-                                .font(.body)
-                                .foregroundStyle(Score3DTheme.textSecondary)
-                                .listRowBackground(Color.clear)
-                        } else {
-                            ForEach(rounds) { round in
-                                Button {
-                                    selectedRound = round
-                                } label: {
-                                    RoundRowView(round: round)
-                                }
-                                .buttonStyle(.plain)
-                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    Button(role: .destructive) {
-                                        roundPendingDeletion = round
-                                    } label: {
-                                        Label("Supprimer", systemImage: "trash")
-                                    }
-                                }
-                            }
-                        }
-                } header: {
                     Text("Parcours")
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(Score3DTheme.textPrimary)
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+
+                    if rounds.isEmpty {
+                        Text("Aucun parcours")
+                            .font(.body)
+                            .foregroundStyle(Score3DTheme.textSecondary)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                            .listRowBackground(Color.clear)
+                    } else {
+                        ForEach(rounds) { round in
+                            Button {
+                                selectedRound = round
+                            } label: {
+                                RoundRowView(round: round)
+                            }
+                            .buttonStyle(.plain)
+                            .overlay(alignment: .topTrailing) {
+                                Button {
+                                    roundPendingEdition = round
+                                } label: {
+                                    RoundEditButton()
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Modifier \(round.name)")
+                                .padding(.top, 12)
+                                .padding(.trailing, 14)
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    roundPendingDeletion = round
+                                } label: {
+                                    Label("Supprimer", systemImage: "trash")
+                                }
+                            }
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                            .listRowBackground(Color.clear)
+                        }
+                    }
+                } header: {
+                    newRoundButton
+                        .padding(.horizontal, 22)
+                        .padding(.top, 10)
+                        .padding(.bottom, 12)
+                        .background(Score3DTheme.background)
                         .textCase(nil)
                 }
-                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                .listRowBackground(Color.clear)
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
@@ -207,6 +218,11 @@ struct ContentView: View {
                 NewRoundFlowView { round in
                     pendingCreatedRound = round
                     isShowingNewRound = false
+                }
+            }
+            .sheet(item: $roundPendingEdition) { round in
+                EditRoundFlowView(round: round) {
+                    roundPendingEdition = nil
                 }
             }
             .onChange(of: isShowingNewRound) { _, isPresented in
@@ -235,6 +251,17 @@ struct ContentView: View {
                 )
             }
         }
+    }
+
+    private var newRoundButton: some View {
+        Button {
+            isShowingNewRound = true
+        } label: {
+            Text("Nouveau parcours")
+                .font(.title3.weight(.semibold))
+                .frame(maxWidth: .infinity, minHeight: 52)
+        }
+        .buttonStyle(PrimaryActionButtonStyle())
     }
 
     private var deleteConfirmationBinding: Binding<Bool> {
@@ -280,6 +307,7 @@ private struct RoundRowView: View {
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(Score3DTheme.textPrimary)
                 .lineLimit(1)
+                .padding(.trailing, 58)
 
             Text(round.date, format: .dateTime.day().month(.wide).year())
                 .font(.callout)
@@ -307,6 +335,21 @@ private struct RoundRowView: View {
                 .stroke(Score3DTheme.border, lineWidth: 1)
         }
         .padding(.vertical, 3)
+    }
+}
+
+private struct RoundEditButton: View {
+    var body: some View {
+        Image(systemName: "pencil")
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Score3DTheme.interaction)
+            .frame(width: 28, height: 28)
+            .background(Score3DTheme.selection, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(Score3DTheme.interaction.opacity(0.38), lineWidth: 1)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 
@@ -1041,6 +1084,178 @@ struct NewRoundFlowView: View {
         } catch {
             modelContext.rollback()
             persistenceAlert = PersistenceAlert(message: "Le parcours n’a pas pu être créé. Réessayez avant de fermer l’app.")
+        }
+    }
+}
+
+struct EditRoundFlowView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Bindable var round: ShootingRound
+    @Query private var rounds: [ShootingRound]
+    let onDone: () -> Void
+
+    @State private var name: String
+    @State private var date: Date
+    @State private var initialName: String
+    @State private var initialDate: Date
+    @State private var slots: [RoundArcherSlot]
+    @State private var initialSlotNames: [String]
+    @State private var isShowingCancelConfirmation = false
+    @State private var persistenceAlert: PersistenceAlert?
+    @State private var datePickerID = UUID()
+    @FocusState private var focusedSlotID: UUID?
+
+    init(round: ShootingRound, onDone: @escaping () -> Void) {
+        self.round = round
+        self.onDone = onDone
+
+        let archerSlots = round.archerNames.map { RoundArcherSlot(name: $0) }
+        _name = State(initialValue: round.name)
+        _date = State(initialValue: round.date)
+        _initialName = State(initialValue: round.name)
+        _initialDate = State(initialValue: round.date)
+        _slots = State(initialValue: archerSlots)
+        _initialSlotNames = State(initialValue: archerSlots.map(\.name))
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Parcours") {
+                    TextField("Nom du parcours", text: $name)
+                        .foregroundStyle(Score3DTheme.textPrimary)
+                        .textInputAutocapitalization(.sentences)
+                        .submitLabel(.done)
+
+                    DatePicker("Date", selection: $date, in: ...Date(), displayedComponents: .date)
+                        .id(datePickerID)
+                        .onChange(of: date) { _, _ in
+                            datePickerID = UUID()
+                        }
+                }
+                .listRowBackground(Score3DTheme.surface)
+
+                Section {
+                    ForEach($slots) { $slot in
+                        let index = slotIndex(for: slot)
+                        RoundArcherSlotView(
+                            index: index,
+                            slot: $slot,
+                            focusedSlotID: $focusedSlotID,
+                            canRemove: false,
+                            removeAction: { }
+                        )
+                    }
+                } header: {
+                    Text("Peloton")
+                        .foregroundStyle(Score3DTheme.textPrimary)
+                } footer: {
+                    if hasDuplicateNames {
+                        Text("Chaque archer du peloton doit avoir un nom distinct.")
+                            .foregroundStyle(.red)
+                    } else {
+                        Text("Le nombre d’archers ne peut pas être modifié après la création du parcours.")
+                            .foregroundStyle(Score3DTheme.textSecondary)
+                    }
+                }
+                .listRowBackground(Score3DTheme.surface)
+
+                Section {
+                    Button(action: saveChanges) {
+                        Text("Enregistrer les modifications")
+                            .font(.title3.weight(.semibold))
+                            .frame(maxWidth: .infinity, minHeight: 54)
+                    }
+                    .buttonStyle(PrimaryActionButtonStyle())
+                    .disabled(!canSave)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .listRowBackground(Color.clear)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Score3DTheme.background)
+            .tint(Score3DTheme.interaction)
+            .navigationTitle("Modifier le parcours")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Annuler", action: cancel)
+                }
+            }
+            .alert("Abandonner les modifications ?", isPresented: $isShowingCancelConfirmation) {
+                Button("Continuer l’édition", role: .cancel) { }
+                Button("Abandonner", role: .destructive, action: onDone)
+            } message: {
+                Text("Les modifications saisies pour ce parcours seront perdues.")
+            }
+            .alert(item: $persistenceAlert) { alert in
+                Alert(
+                    title: Text("Sauvegarde impossible"),
+                    message: Text(alert.message),
+                    dismissButton: .default(Text("OK"))
+                )
+            }
+            .interactiveDismissDisabled(hasChanges)
+            .background {
+                SheetDismissAttemptHandler(isDisabled: hasChanges) {
+                    isShowingCancelConfirmation = true
+                }
+            }
+        }
+    }
+
+    private var editedArcherNames: [String] {
+        RoundSetupRules.resolvedEditedPelotonNames(slots.map(\.name))
+    }
+
+    private var hasDuplicateNames: Bool {
+        RoundSetupRules.containsDuplicateArcherNames(editedArcherNames)
+    }
+
+    private var canSave: Bool {
+        !slots.isEmpty && !hasDuplicateNames
+    }
+
+    private var hasChanges: Bool {
+        name != initialName || date != initialDate || slots.map(\.name) != initialSlotNames
+    }
+
+    private func slotIndex(for slot: RoundArcherSlot) -> Int {
+        (slots.firstIndex { $0.id == slot.id } ?? 0) + 1
+    }
+
+    private func cancel() {
+        if hasChanges {
+            isShowingCancelConfirmation = true
+        } else {
+            onDone()
+        }
+    }
+
+    private func saveChanges() {
+        let resolvedName = RoundSetupRules.uniqueRoundName(
+            baseName: name,
+            date: date,
+            existingRounds: rounds
+                .filter { $0.persistentModelID != round.persistentModelID }
+                .map { RoundListSnapshot(name: $0.name, date: $0.date, isFinished: $0.isFinished) }
+        )
+        let archerNamesByOrder = Dictionary(uniqueKeysWithValues: editedArcherNames.enumerated().map { ($0.offset, $0.element) })
+
+        round.name = resolvedName
+        round.date = date
+        for entry in round.entries {
+            if let archerName = archerNamesByOrder[entry.archerOrder] {
+                entry.archerName = archerName
+            }
+        }
+
+        do {
+            try modelContext.save()
+            onDone()
+        } catch {
+            modelContext.rollback()
+            persistenceAlert = PersistenceAlert(message: "Le parcours n’a pas pu être modifié. Réessayez avant de fermer l’app.")
         }
     }
 }

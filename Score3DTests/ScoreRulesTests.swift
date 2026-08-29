@@ -127,6 +127,26 @@ struct ScoreRulesTests {
         #expect(RoundSetupRules.canRemoveArcherSlot(currentSlotCount: 2))
     }
 
+    @Test func editedPelotonNamesKeepExistingOrder() {
+        let names = ["Zoe", "  alice ", ""]
+
+        #expect(RoundSetupRules.resolvedEditedPelotonNames(names) == ["Zoe", "alice", "Archer 3"])
+    }
+
+    @Test func renamingArcherEntriesByOrderPreservesScores() {
+        let round = ShootingRound(name: "Parcours club", firstTarget: 1, archerNames: ["Alice", "Bruno"])
+        let entry = round.entries.first { $0.archerOrder == 0 && $0.targetOrderIndex == 0 }
+        entry?.arrow1 = 11
+        entry?.arrow2 = 10
+
+        for entry in round.entries where entry.archerOrder == 0 {
+            entry.archerName = "Camille"
+        }
+
+        #expect(round.total(for: "Camille") == 21)
+        #expect(round.total(for: "Alice") == 0)
+    }
+
     @Test func pelotonCanStartWithoutTypedText() {
         let names = RoundSetupRules.resolvedPelotonNames([""])
 

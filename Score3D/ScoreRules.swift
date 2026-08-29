@@ -177,6 +177,14 @@ nonisolated struct RoundSetupRules: Sendable {
             .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
+    static func resolvedEditedPelotonNames(_ names: [String]) -> [String] {
+        names.enumerated()
+            .map { index, name in
+                let normalizedName = normalizedArcherName(name)
+                return normalizedName.isEmpty ? "Archer \(index + 1)" : normalizedName
+            }
+    }
+
     static func uniqueRoundName(
         baseName: String,
         date: Date,
