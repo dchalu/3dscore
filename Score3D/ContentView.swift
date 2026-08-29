@@ -1483,8 +1483,8 @@ struct ScoringView: View {
             }
             .font(.body)
             .foregroundStyle(Score3DTheme.textPrimary)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 7)
+            .padding(.horizontal, 18)
+            .frame(minHeight: 44)
             .background(Score3DTheme.surface, in: Capsule())
             .contentShape(Capsule())
             .accessibilityLabel("Quitter le parcours")
