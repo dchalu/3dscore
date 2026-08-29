@@ -62,7 +62,7 @@ Regles d'usage:
 | Bouton d'action principal | Rayon `16`, hauteur minimale `52...54` |
 | Boutons de score | Rayon `12`, bordure `1.5` |
 | Petits controles carres | Rayon `8...10` |
-| Boutons ronds de navigation | `44 x 44`, fond `surface`, bordure `border` |
+| Boutons de navigation | Rond icon-only `44 x 44` ou capsule texte, fond `surface`, bordure `border` selon le contexte |
 | Chevrons de cible | `36 x 36`, fond `surface`, bordure `border` |
 | Progression segmentee | Hauteur `8`, rayon `2`, espacement `3` |
 | Padding de carte | `14...16` |
@@ -113,11 +113,19 @@ Style: fond `surface`, bordure `interaction`, rayon `12`. L'etat desactive passe
 
 Les ecrans de scoring et de recapitulatif utilisent une barre custom avec:
 
-- bouton rond `chevron.left` a gauche;
+- bouton de retour a gauche, rond icon-only ou capsule texte selon la densite de l'ecran;
 - titre en `.title3`;
 - navigation bar native masquee.
 
-Le chevron doit utiliser `dismiss()` quand il ramene a l'accueil.
+Le bouton de retour doit utiliser `dismiss()` quand il ramene a l'accueil.
+
+### Champs de noms d'archers
+
+Les champs de creation et de modification de peloton peuvent proposer une autocompletion discrete basee sur les archers recents:
+
+- suffixe en `textSecondary` a opacite reduite;
+- validation par la touche de soumission du champ;
+- aucune couleur d'accent nouvelle.
 
 ### Cartes de parcours et recapitulatif
 

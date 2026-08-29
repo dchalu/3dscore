@@ -185,6 +185,38 @@ nonisolated struct RoundSetupRules: Sendable {
             }
     }
 
+    static func recentArcherNameSuggestions(from rounds: [ArcherNameSuggestionSource], limit: Int = 12) -> [String] {
+        var seenNames = Set<String>()
+        var suggestions: [String] = []
+
+        for round in rounds.sorted(by: { $0.date > $1.date }) {
+            for name in round.archerNames.map(normalizedArcherName) where !name.isEmpty && !isGeneratedArcherName(name) {
+                let key = suggestionKey(for: name)
+                guard seenNames.insert(key).inserted else { continue }
+
+                suggestions.append(name)
+                if suggestions.count == limit {
+                    return suggestions
+                }
+            }
+        }
+
+        return suggestions
+    }
+
+    static func matchingArcherNameSuggestions(for text: String, in suggestions: [String], limit: Int = 5) -> [String] {
+        let normalizedText = normalizedArcherName(text)
+        guard !normalizedText.isEmpty else { return [] }
+
+        let normalizedKey = suggestionKey(for: normalizedText)
+        return suggestions.filter { suggestion in
+            let suggestionKey = suggestionKey(for: suggestion)
+            return suggestionKey.hasPrefix(normalizedKey) && suggestionKey != normalizedKey
+        }
+        .prefix(limit)
+        .map { $0 }
+    }
+
     static func uniqueRoundName(
         baseName: String,
         date: Date,
@@ -231,6 +263,24 @@ nonisolated struct RoundSetupRules: Sendable {
     static func canRemoveArcherSlot(currentSlotCount: Int) -> Bool {
         currentSlotCount > 1
     }
+
+    private static func isGeneratedArcherName(_ name: String) -> Bool {
+        let parts = name.split(separator: " ")
+        guard parts.count == 2, parts[0].localizedCaseInsensitiveCompare("Archer") == .orderedSame else {
+            return false
+        }
+
+        return Int(parts[1]) != nil
+    }
+
+    private static func suggestionKey(for name: String) -> String {
+        normalizedArcherName(name).folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+    }
+}
+
+nonisolated struct ArcherNameSuggestionSource: Equatable, Sendable {
+    var date: Date
+    var archerNames: [String]
 }
 
 nonisolated struct RoundListRules: Sendable {

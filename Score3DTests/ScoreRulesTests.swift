@@ -159,6 +159,32 @@ struct ScoreRulesTests {
         #expect(!RoundSetupRules.containsDuplicateArcherNames(["Alice", "Bruno"]))
     }
 
+    @Test func recentArcherSuggestionsUseNewestRoundsAndIgnoreGeneratedNames() {
+        let calendar = Calendar(identifier: .gregorian)
+        let olderDate = calendar.date(from: DateComponents(year: 2026, month: 8, day: 26))!
+        let newerDate = calendar.date(from: DateComponents(year: 2026, month: 8, day: 27))!
+        let rounds = [
+            ArcherNameSuggestionSource(date: olderDate, archerNames: ["Alice", "Marie"]),
+            ArcherNameSuggestionSource(date: newerDate, archerNames: ["  Camille ", "marie", "Archer 1"]),
+        ]
+
+        #expect(RoundSetupRules.recentArcherNameSuggestions(from: rounds) == ["Camille", "marie", "Alice"])
+    }
+
+    @Test func archerSuggestionsMatchTypedPrefixWithoutReplacingExactName() {
+        let suggestions = ["Marie", "Marc", "Alice"]
+
+        #expect(RoundSetupRules.matchingArcherNameSuggestions(for: "M", in: suggestions) == ["Marie", "Marc"])
+        #expect(RoundSetupRules.matchingArcherNameSuggestions(for: "marie", in: suggestions).isEmpty)
+        #expect(RoundSetupRules.matchingArcherNameSuggestions(for: "", in: suggestions).isEmpty)
+    }
+
+    @Test func archerSuggestionsAreLimited() {
+        let suggestions = ["Marie", "Marc", "Martin"]
+
+        #expect(RoundSetupRules.matchingArcherNameSuggestions(for: "Ma", in: suggestions, limit: 2) == ["Marie", "Marc"])
+    }
+
     @Test func arrowSelectionStartsOnFirstArrowForEmptyEntry() {
         #expect(ArrowInputRules.initialSelection(arrow1: nil, arrow2: nil) == .first)
         #expect(ArrowInputRules.isScoreInputEnabled(selectedArrow: .first))

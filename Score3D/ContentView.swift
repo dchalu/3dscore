@@ -961,6 +961,7 @@ struct NewRoundFlowView: View {
                             index: index,
                             slot: $slot,
                             focusedSlotID: $focusedSlotID,
+                            suggestionNames: recentArcherNameSuggestions,
                             canRemove: canRemoveSlot(at: index),
                             removeAction: { removeSlot(slot) }
                         )
@@ -1022,6 +1023,7 @@ struct NewRoundFlowView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Annuler", action: cancel)
                 }
+
             }
             .alert("Abandonner la création ?", isPresented: $isShowingCancelConfirmation) {
                 Button("Continuer l’édition", role: .cancel) { }
@@ -1056,6 +1058,12 @@ struct NewRoundFlowView: View {
 
     private var canStartRound: Bool {
         !slots.isEmpty && !hasDuplicateNames
+    }
+
+    private var recentArcherNameSuggestions: [String] {
+        RoundSetupRules.recentArcherNameSuggestions(
+            from: rounds.map { ArcherNameSuggestionSource(date: $0.date, archerNames: $0.archerNames) }
+        )
     }
 
     private var hasChanges: Bool {
@@ -1171,6 +1179,7 @@ struct EditRoundFlowView: View {
                             index: index,
                             slot: $slot,
                             focusedSlotID: $focusedSlotID,
+                            suggestionNames: recentArcherNameSuggestions,
                             canRemove: false,
                             removeAction: { }
                         )
@@ -1210,6 +1219,7 @@ struct EditRoundFlowView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Annuler", action: cancel)
                 }
+
             }
             .alert("Abandonner les modifications ?", isPresented: $isShowingCancelConfirmation) {
                 Button("Continuer l’édition", role: .cancel) { }
@@ -1243,6 +1253,12 @@ struct EditRoundFlowView: View {
 
     private var canSave: Bool {
         !slots.isEmpty && !hasDuplicateNames
+    }
+
+    private var recentArcherNameSuggestions: [String] {
+        RoundSetupRules.recentArcherNameSuggestions(
+            from: rounds.map { ArcherNameSuggestionSource(date: $0.date, archerNames: $0.archerNames) }
+        )
     }
 
     private var hasChanges: Bool {
@@ -1293,8 +1309,30 @@ private struct RoundArcherSlotView: View {
     let index: Int
     @Binding var slot: RoundArcherSlot
     var focusedSlotID: FocusState<UUID?>.Binding
+    let suggestionNames: [String]
     let canRemove: Bool
     let removeAction: () -> Void
+
+    private var bestSuggestion: String? {
+        RoundSetupRules.matchingArcherNameSuggestions(for: slot.name, in: suggestionNames, limit: 1).first
+    }
+
+    private var completionSuffix: String? {
+        guard focusedSlotID.wrappedValue == slot.id,
+              let bestSuggestion,
+              slot.name.count < bestSuggestion.count else { return nil }
+
+        let suffixStartIndex = bestSuggestion.index(bestSuggestion.startIndex, offsetBy: slot.name.count)
+        return String(bestSuggestion[suffixStartIndex...])
+    }
+
+    private func applyBestSuggestion() {
+        if let bestSuggestion {
+            slot.name = bestSuggestion
+        }
+
+        focusedSlotID.wrappedValue = nil
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -1303,11 +1341,28 @@ private struct RoundArcherSlotView: View {
                     .font(.headline)
                     .foregroundStyle(Score3DTheme.textPrimary)
 
-                TextField("Archer \(index)", text: $slot.name)
-                    .foregroundStyle(Score3DTheme.textPrimary)
-                    .textInputAutocapitalization(.words)
-                    .submitLabel(.done)
-                    .focused(focusedSlotID, equals: slot.id)
+                ZStack(alignment: .leading) {
+                    if let completionSuffix {
+                        HStack(spacing: 0) {
+                            Text(slot.name)
+                                .foregroundStyle(.clear)
+                            Text(completionSuffix)
+                                .foregroundStyle(Score3DTheme.textSecondary.opacity(0.7))
+                        }
+                        .font(.body)
+                        .allowsHitTesting(false)
+                    }
+
+                    TextField("Archer \(index)", text: $slot.name)
+                        .foregroundStyle(Score3DTheme.textPrimary)
+                        .textInputAutocapitalization(.words)
+                        .textContentType(.name)
+                        .autocorrectionDisabled(true)
+                        .disableAutocorrection(true)
+                        .submitLabel(.done)
+                        .focused(focusedSlotID, equals: slot.id)
+                        .onSubmit(applyBestSuggestion)
+                }
             }
 
             if canRemove {
@@ -1388,6 +1443,7 @@ struct ScoringView: View {
         VStack(spacing: 0) {
             if let entry = round.activeEntry {
                 scoringTopBar
+                    .padding(.top, 14)
                     .padding(.bottom, 14)
                 targetProgressHeader(for: entry)
                     .padding(.bottom, 24)
@@ -1419,22 +1475,18 @@ struct ScoringView: View {
         }
     }
 
+
     private var scoringTopBar: some View {
         HStack(spacing: 10) {
-            Button {
+            Button("Retour") {
                 dismiss()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.title3.weight(.semibold))
-                    .frame(width: 44, height: 44)
-                    .background(Score3DTheme.surface, in: Circle())
-                    .overlay {
-                        Circle()
-                            .stroke(Score3DTheme.border, lineWidth: 1)
-                    }
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(Score3DTheme.interaction)
+            .font(.body)
+            .foregroundStyle(Score3DTheme.textPrimary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(Score3DTheme.surface, in: Capsule())
+            .contentShape(Capsule())
             .accessibilityLabel("Quitter le parcours")
 
             Text(round.name)
@@ -1507,13 +1559,13 @@ struct ScoringView: View {
                     Text("F1")
                         .font(.callout.weight(.semibold))
                         .foregroundStyle(Score3DTheme.textSecondary)
-                        .frame(width: 32, alignment: .trailing)
+                        .frame(width: 32, alignment: .center)
                         .accessibilityLabel("Flèche 1")
 
                     Text("F2")
                         .font(.callout.weight(.semibold))
                         .foregroundStyle(Score3DTheme.textSecondary)
-                        .frame(width: 32, alignment: .trailing)
+                        .frame(width: 32, alignment: .center)
                         .accessibilityLabel("Flèche 2")
 
                     Color.clear
@@ -1522,12 +1574,13 @@ struct ScoringView: View {
                     Text("Total")
                         .font(.callout.weight(.semibold))
                         .foregroundStyle(Score3DTheme.textSecondary)
-                        .frame(width: 40, alignment: .trailing)
+                        .frame(width: 40, alignment: .center)
 
                     Text("Cumul")
                         .font(.callout.weight(.semibold))
                         .foregroundStyle(Score3DTheme.textSecondary)
-                        .frame(width: 46, alignment: .trailing)
+                        .lineLimit(1)
+                        .frame(width: 54, alignment: .center)
                 }
             }
             .padding(.horizontal, 8)
@@ -1554,13 +1607,13 @@ struct ScoringView: View {
                             Text(ScoreRules.displayValue(entry?.arrow1))
                                 .font(.system(size: 20, weight: .regular, design: .default).monospacedDigit())
                                 .foregroundStyle(index == round.currentArcherIndex ? Score3DTheme.textPrimary : Score3DTheme.textSecondary)
-                                .frame(width: 32, alignment: .trailing)
+                                .frame(width: 32, alignment: .center)
                                 .accessibilityLabel("Flèche 1 \(ScoreRules.displayValue(entry?.arrow1))")
 
                             Text(ScoreRules.displayValue(entry?.arrow2))
                                 .font(.system(size: 20, weight: .regular, design: .default).monospacedDigit())
                                 .foregroundStyle(index == round.currentArcherIndex ? Score3DTheme.textPrimary : Score3DTheme.textSecondary)
-                                .frame(width: 32, alignment: .trailing)
+                                .frame(width: 32, alignment: .center)
                                 .accessibilityLabel("Flèche 2 \(ScoreRules.displayValue(entry?.arrow2))")
 
                             Color.clear
@@ -1569,12 +1622,12 @@ struct ScoringView: View {
                             Text("\(entry?.targetTotal ?? 0)")
                                 .font(.system(size: 20, weight: index == round.currentArcherIndex ? .bold : .regular, design: .default).monospacedDigit())
                                 .foregroundStyle(index == round.currentArcherIndex ? Score3DTheme.textPrimary : Score3DTheme.textSecondary)
-                                .frame(width: 40, alignment: .trailing)
+                                .frame(width: 40, alignment: .center)
 
                             Text("\(round.total(for: name))")
                                 .font(.system(size: 20, weight: index == round.currentArcherIndex ? .bold : .regular, design: .default).monospacedDigit())
                                 .foregroundStyle(index == round.currentArcherIndex ? Score3DTheme.textPrimary : Score3DTheme.textSecondary)
-                                .frame(width: 46, alignment: .trailing)
+                                .frame(width: 54, alignment: .center)
                         }
                     }
                     .frame(maxWidth: .infinity, minHeight: 42)
